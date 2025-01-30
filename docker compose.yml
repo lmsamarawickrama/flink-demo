@@ -1,0 +1,55 @@
+version: '3.9'
+
+services:
+  kafka:
+    image: bitnami/kafka:latest
+    container_name: kafka
+    environment:
+      - KAFKA_ENABLE_KRAFT=true
+      - KAFKA_KRAFT_BROKER_ID=1
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    ports:
+      - "9092:9092"
+
+  flink-jobmanager:
+    image: flink:latest
+    container_name: flink-jobmanager
+    command: jobmanager
+    environment:
+      - FLINK_PROPERTIES=jobmanager.rpc.address: flink-jobmanager
+    ports:
+      - "8081:8081"
+
+  flink-taskmanager:
+    image: flink:latest
+    container_name: flink-taskmanager
+    command: taskmanager
+    environment:
+      - FLINK_PROPERTIES=jobmanager.rpc.address: flink-jobmanager
+    depends_on:
+      - flink-jobmanager
+
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: fraud_detection
+    ports:
+      - "5432:5432"
+
+  admin-api:
+    build: ./admin-api
+    container_name: admin-api
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+
